@@ -1,12 +1,17 @@
 import os
 import pandas as pd
+import numpy as np
+from typing import Tuple
+
 from torch.utils.data import Dataset
 from torch.tensor import Tensor
-from typing import Tuple
 
 
 class CustomDataset(Dataset):
     """Custom fraudalent traffic detection dataset"""
+
+    TARGET_COLUMN = "is_attributed"
+
     def __init__(self, file_name: str = "train.csv",
                  root_dir: str = os.path.join(os.getcwd(), "data")) -> None:
         """
@@ -17,14 +22,17 @@ class CustomDataset(Dataset):
         Returns:
             None
         """
+
         assert set([file_name]) & set(os.listdir(root_dir)), \
             f"file_name passed as an argument {file_name} " \
             f"is not in given {root_dir} directory, {os.listdir(root_dir)} are."
-        data = pd.read_csv(os.path.join(root_dir, file_name), header=0, sep=",", nrows=10)
+
+        data = pd.read_csv(os.path.join(root_dir, file_name), header=0, sep=",", nrows=500)
         data = self._preprocess_data(data)
         self.len = len(data)
-        self.x_data = data.drop(["is_attributed"], axis=1)
-        self.y_data = data["is_attributed"]
+        self.x_data = data.drop([self.TARGET_COLUMN], axis=1).values
+        self.y_data = data["is_attributed"].values
+
         assert self.len == len(self.x_data) == len(self.y_data), \
             f"length mismatch, whole dataset's length is {self.len}, " \
             f"whereas x_data's length is {len(self.x_data)} and y_data's - {len(self.y_data)}."
@@ -36,18 +44,22 @@ class CustomDataset(Dataset):
         Returns:
             data (pd.DataFrame): preprocessed data
         """
+
         data = self._handle_time_categorical_data(data)
         all_columns = data.columns
+
         # Drop columns which nans make more than 65% of all datapoints, since they're irrelevant
         columns_to_drop = [attribute for attribute in all_columns if
                            len([x for x in data[attribute].isna() if x is not False]) / len(
                                data) * 100.0 >= 65.0]
         print(f"Columns to drop, because nans share has exceeded threshold: {columns_to_drop}")
 
-        columns_to_drop.extend([attribute for attribute in all_columns
-                                if data.corr()["is_attributed"][attribute] < 0.01])
+        target_corr_matrix = data.corr()[self.TARGET_COLUMN]
+        columns_to_drop.extend([attribute for attribute in target_corr_matrix.index
+                                if data.corr()[self.TARGET_COLUMN][attribute] < 0.01])
         print(f"Previous columns to drop, extended by columns which correlation "
               f"to the target column is lower then threshold: {columns_to_drop}")
+        data = data.drop(columns_to_drop, axis=1)
         return data
 
     @staticmethod
@@ -101,7 +113,7 @@ class CustomDataset(Dataset):
         """
         return self.len
 
-    def __getitem__(self, idx: int) -> Tuple[Tensor, pd.DataFrame]:
+    def __getitem__(self, idx: int) -> Tuple[np.array, np.array]:
         """
         Args:
             idx: Specifies position of dataset to be returned.
@@ -109,4 +121,4 @@ class CustomDataset(Dataset):
         Returns:
             Tuple[Tensor, pd.DataFrame]: samples of x_data and y_data
         """
-        return Tensor(self.x_data[idx, :]), self.y_data[idx, :]
+        return self.x_data[idx], self.y_data[idx]

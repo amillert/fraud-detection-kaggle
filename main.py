@@ -1,10 +1,13 @@
-from preprocessing.preprocess_data import CustomDataset
 import numpy as np
 import time
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+
+from models.naive_nn import NaiveNN
+from preprocessing.preprocess_data import CustomDataset
+
 
 if __name__ == "__main__":
     dataset = CustomDataset()
@@ -14,16 +17,17 @@ if __name__ == "__main__":
 
     DATA_SIZE = len(dataset)
     BATCH_SIZE = 512
+    H_DIMS = 200
 
     print(f"Amount of data read: {DATA_SIZE}")
-    batches = DataLoader(dataset=dataset, batch_size=512, shuffle=True, num_workers=4)
+    batches = DataLoader(dataset=dataset, batch_size=512, shuffle=True, num_workers=0)
     print('Creating batches done')
 
     # TODO:
-    #  - implement naive model
+    #  - ~~implement naive model~~
     #  - implement negative sampling model and loss function
 
-    model = ...
+    model = NaiveNN(DATA_SIZE, H_DIMS)
     EPOCHS = 100
     ETA = 0.001
     MOMENTUM = 0.9
@@ -38,9 +42,9 @@ if __name__ == "__main__":
         tick = time.time()
         loss_total = 0.0
         batch_count = 0
-        for x, y in batches:
+        for X, y in batches:
             batch_count += 1
-            naive_loss = criterion(model(x), y)
+            naive_loss = criterion(model(X), y)
             loss_total += naive_loss.item()
 
             # TODO:
