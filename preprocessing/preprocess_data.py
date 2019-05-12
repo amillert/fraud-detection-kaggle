@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from typing import Tuple
 
+import torch
 from torch.utils.data import Dataset
-from torch.tensor import Tensor
 
 
 class CustomDataset(Dataset):
@@ -27,15 +27,20 @@ class CustomDataset(Dataset):
             f"file_name passed as an argument {file_name} " \
             f"is not in given {root_dir} directory, {os.listdir(root_dir)} are."
 
-        data = pd.read_csv(os.path.join(root_dir, file_name), header=0, sep=",", nrows=500)
+        data = pd.read_csv(os.path.join(root_dir, file_name), header=0, sep=",", nrows=5000)
         data = self._preprocess_data(data)
-        self.len = len(data)
-        self.x_data = data.drop([self.TARGET_COLUMN], axis=1).values
-        self.y_data = data["is_attributed"].values
+        x_data = data.drop([self.TARGET_COLUMN], axis=1).values
+        y_data = data["is_attributed"].values
 
-        assert self.len == len(self.x_data) == len(self.y_data), \
+        self.len = len(data)
+
+        assert self.len == len(x_data) == len(y_data), \
             f"length mismatch, whole dataset's length is {self.len}, " \
-            f"whereas x_data's length is {len(self.x_data)} and y_data's - {len(self.y_data)}."
+            f"whereas x_data's length is {len(x_data)} and y_data's - {len(y_data)}."
+        
+        self.x_data = torch.tensor(x_data, dtype=torch.float32)
+        self.y_data = torch.tensor(y_data, dtype=torch.float32)
+        self.shape = self.x_data.shape
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -56,7 +61,8 @@ class CustomDataset(Dataset):
 
         target_corr_matrix = data.corr()[self.TARGET_COLUMN]
         columns_to_drop.extend([attribute for attribute in target_corr_matrix.index
-                                if data.corr()[self.TARGET_COLUMN][attribute] < 0.01])
+                                if (data.corr()[self.TARGET_COLUMN][attribute] < 0.0005 and
+                                    data.corr()[self.TARGET_COLUMN][attribute] > -0.0005)])
         print(f"Previous columns to drop, extended by columns which correlation "
               f"to the target column is lower then threshold: {columns_to_drop}")
         data = data.drop(columns_to_drop, axis=1)
@@ -109,16 +115,16 @@ class CustomDataset(Dataset):
     def __len__(self) -> int:
         """
         Returns:
-            int: length of the dataset
+            int: length of the dataset (dim = 0)
         """
         return self.len
 
-    def __getitem__(self, idx: int) -> Tuple[np.array, np.array]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             idx: Specifies position of dataset to be returned.
 
         Returns:
-            Tuple[Tensor, pd.DataFrame]: samples of x_data and y_data
+            Tuple[np.array, np.array]: samples of x_data and y_data
         """
         return self.x_data[idx], self.y_data[idx]
