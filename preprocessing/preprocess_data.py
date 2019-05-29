@@ -6,14 +6,13 @@ from typing import Tuple
 import torch
 from torch.utils.data import Dataset
 
-
 class CustomDataset(Dataset):
     """Custom fraudalent traffic detection dataset"""
 
     TARGET_COLUMN = "is_attributed"
 
     def __init__(self, file_name: str = "train.csv",
-                 root_dir: str = os.path.join(os.getcwd(), "data")) -> None:
+                 root_dir: str = os.path.join(os.getcwd(), "data"), load_x=False, load_y=False) -> None:
         """
         Args:
             file_name (string): Name of the file to be loaded.
@@ -22,25 +21,35 @@ class CustomDataset(Dataset):
         Returns:
             None
         """
+        if load_x and load_y:
+            self.x_data = torch.load(os.path.join(root_dir, "x_data.pt")).float()
+            self.y_data = torch.load(os.path.join(root_dir, "y_data.pt")).float()
+            print("loading from files done")
+            self.shape = self.x_data.shape
+            self.len = self.shape[0]
+        else:
+            assert set([file_name]) & set(os.listdir(root_dir)), \
+                f"file_name passed as an argument {file_name} " \
+                f"is not in given {root_dir} directory, {os.listdir(root_dir)} are."
 
-        assert set([file_name]) & set(os.listdir(root_dir)), \
-            f"file_name passed as an argument {file_name} " \
-            f"is not in given {root_dir} directory, {os.listdir(root_dir)} are."
+            data = pd.read_csv(os.path.join(root_dir, file_name), header=0, sep=",", nrows=500000)
+            data = self._preprocess_data(data)
+            x_data = data.drop([self.TARGET_COLUMN], axis=1).values
+            y_data = data["is_attributed"].values
 
-        data = pd.read_csv(os.path.join(root_dir, file_name), header=0, sep=",", nrows=5000)
-        data = self._preprocess_data(data)
-        x_data = data.drop([self.TARGET_COLUMN], axis=1).values
-        y_data = data["is_attributed"].values
+            self.len = len(data)
 
-        self.len = len(data)
+            assert self.len == len(x_data) == len(y_data), \
+                f"length mismatch, whole dataset's length is {self.len}, " \
+                f"whereas x_data's length is {len(x_data)} and y_data's - {len(y_data)}."
+            
+            self.x_data = torch.tensor(x_data, dtype=torch.float32)
+            self.y_data = torch.tensor(y_data, dtype=torch.float32)
+            self.shape = self.x_data.shape
 
-        assert self.len == len(x_data) == len(y_data), \
-            f"length mismatch, whole dataset's length is {self.len}, " \
-            f"whereas x_data's length is {len(x_data)} and y_data's - {len(y_data)}."
-        
-        self.x_data = torch.tensor(x_data, dtype=torch.float32)
-        self.y_data = torch.tensor(y_data, dtype=torch.float32)
-        self.shape = self.x_data.shape
+            torch.save(self.x_data, os.path.join(root_dir, "x_data.pt")) 
+            torch.save(self.y_data, os.path.join(root_dir, "y_data.pt")) 
+            print("saving to files done")
 
     def _preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """
