@@ -11,9 +11,9 @@ from preprocessing.preprocess_data import CustomDataset
 
 def learning():
     ## save data
-    tick = time.time()
-    DATASET = CustomDataset()
-    print(time.time() - tick)
+    # tick = time.time()
+    # DATASET = CustomDataset()
+    # print(time.time() - tick)
     # 284 s
     # exit(14)
 
@@ -22,7 +22,7 @@ def learning():
     DATASET = CustomDataset(load_x=True, load_y=True)
     print(time.time() - tick)
     # 0.003 s
-    exit(12)
+    # exit(12)
 
     # TODO:
     #  - implement arg parser and obtain all the consts from console
@@ -36,30 +36,24 @@ def learning():
             f"For Your reference, use one of these: " \
             f"{[x for x in range(DATA_SIZE) if 1 < x <= 1024 and not DATA_SIZE % x]}"
 
-    H_DIMS = 200
+    H_DIMS = 500
 
     print(f"Amount of data read: {DATA_SIZE}")
     BATCHES = DataLoader(dataset=DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=6)
     print('Creating batches done')
 
-    MODEL = NaiveNN(DATA_SIZE, BATCH_SIZE, FEATURES_SIZE, H_DIMS)
-    EPOCHS = 100
-    # ETA = 0.001
-    ETA = 10
-    # MOMENTUM = 0.9
+    MODEL = NaiveNN(BATCH_SIZE, FEATURES_SIZE, H_DIMS)
+    EPOCHS = 10
+    ETA = 5
     MOMENTUM = 0
 
-    # CRITERION = nn.NLLLoss()
-    # CRITERION = nn.L1Loss()
     CRITERION = nn.MSELoss()
-    # CRITERION = nn.CrossEntropyLoss()
-    OPTIMIZER = torch.optim.SGD(MODEL.parameters(), lr=ETA, momentum=MOMENTUM)
+    OPTIMIZER = torch.optim.SGD(MODEL.parameters(), lr=ETA)  # , momentum=MOMENTUM)
+    # OPTIMIZER = torch.optim.Adam(MODEL.parameters(), lr=ETA)
 
     NUM_BATCHES = np.ceil(DATA_SIZE / BATCH_SIZE)
     print(f"Upcoming batches: {NUM_BATCHES}")
 
-    
-    # MODEL.train()
     for epoch in range(EPOCHS):
         correctly_classified, total_classified = 0.0, 0.0
         tick = time.time()

@@ -3,11 +3,11 @@ import torch.nn.functional as F
 
 
 class NaiveNN(nn.Module):
-    def __init__(self, in_dim, batch_size, f_dim, h_dim):
+    def __init__(self, batch_size, f_dim, h_dim):
         super(NaiveNN, self).__init__()
         # input         -> (BATCH x f_dim)
         # input_layer   -> (f_dim x h_dim)
-        self.hidden_layer = nn.Linear(f_dim, h_dim)  
+        self.hidden_layer = nn.Linear(f_dim, h_dim)
         # result        -> (BATCH x h_dim)
 
         # flattened     -> (1 x BATCH*h_dim)
@@ -43,4 +43,3 @@ class NaiveNN(nn.Module):
         # print(F.log_softmax(positive_out).shape)
         # exit(11)
         return F.softmax(positive_out, dim=0)
-        return positive_out
