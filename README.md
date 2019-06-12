@@ -1,1 +1,1 @@
-# fraud-detection-kaggle
+# Fraud Detection Kaggle
